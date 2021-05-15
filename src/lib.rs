@@ -83,11 +83,17 @@ pub mod dma;
 #[cfg(all(feature = "device-selected", feature = "fmc"))]
 pub mod fmc;
 
+#[cfg(all(feature = "fsmc_lcd", feature = "device-selected", feature = "fmc",))]
+pub mod fsmc_lcd;
+
 #[cfg(feature = "device-selected")]
 pub mod gpio;
 
 #[cfg(feature = "device-selected")]
 pub mod dac;
+
+#[cfg(feature = "device-selected")]
+pub mod bb;
 
 #[cfg(all(
     feature = "usb_fs",
