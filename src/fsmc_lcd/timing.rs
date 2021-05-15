@@ -59,26 +59,15 @@ impl Default for Timing {
     fn default() -> Self {
         Timing {
             access_mode: AccessMode::ModeC,
-            bus_turnaround: Timing::BUS_TURNAROUND_MAX,
+            bus_turnaround: 0,
             data: 255,
-            address_hold: Timing::ADDRESS_HOLD_MAX,
-            address_setup: Timing::ADDRESS_SETUP_MAX,
+            address_hold: 0,
+            address_setup: 1,
         }
     }
 }
 
 impl Timing {
-    /// Maximum allowed value of the bus turnaround time
-    pub const BUS_TURNAROUND_MAX: u8 = 15;
-    /// Minimum allowed value of the data phase time
-    pub const DATA_MIN: u8 = 1;
-    /// Maximum allowed value of the address hold time
-    pub const ADDRESS_HOLD_MIN: u8 = 1;
-    /// Maximum allowed value of the address hold time
-    pub const ADDRESS_HOLD_MAX: u8 = 15;
-    /// Maximum allowed value of the address setup time
-    pub const ADDRESS_SETUP_MAX: u8 = 15;
-
     /// Sets the access mode
     pub fn access_mode(self, access_mode: AccessMode) -> Self {
         Timing {
@@ -94,7 +83,6 @@ impl Timing {
     ///
     /// This function panics if bus_turnaround is greater than Timing::BUS_TURNAROUND_MAX.
     pub fn bus_turnaround(self, bus_turnaround: u8) -> Self {
-        assert!(bus_turnaround <= Timing::BUS_TURNAROUND_MAX);
         Timing {
             bus_turnaround,
             ..self
@@ -108,7 +96,6 @@ impl Timing {
     ///
     /// This function panics if data is less than Timing::DATA_MIN.
     pub fn data(self, data: u8) -> Self {
-        assert!(data >= Timing::DATA_MIN);
         Timing { data, ..self }
     }
     /// Sets the address hold phase time, in units of HCLK cycles
@@ -120,8 +107,6 @@ impl Timing {
     /// This function panics if address_hold is less than Timing::ADDRESS_HOLD_MIN or greater than
     /// Timing::ADDRESS_HOLD_MAX.
     pub fn address_hold(self, address_hold: u8) -> Self {
-        assert!(address_hold >= Timing::ADDRESS_HOLD_MIN);
-        assert!(address_hold <= Timing::ADDRESS_HOLD_MAX);
         Timing {
             address_hold,
             ..self
@@ -135,7 +120,6 @@ impl Timing {
     ///
     /// This function panics if address_setup is greater than Timing::ADDRESS_SETUP_MAX.
     pub fn address_setup(self, address_setup: u8) -> Self {
-        assert!(address_setup <= Timing::ADDRESS_SETUP_MAX);
         Timing {
             address_setup,
             ..self
