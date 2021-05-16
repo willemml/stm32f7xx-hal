@@ -19,7 +19,7 @@ use core::marker::PhantomData;
 
 use super::sealed;
 use super::{Lcd, SubBank1};
-use crate::fsmc_lcd::{SubBank2, SubBank3, SubBank4};
+use crate::fmc_lcd::{SubBank2, SubBank3, SubBank4};
 
 /// A pin that can be used for data bus 0
 pub trait PinD0: sealed::Sealed {}

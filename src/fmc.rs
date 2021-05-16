@@ -7,7 +7,6 @@ use stm32_fmc::FmcPeripheral;
 use stm32_fmc::{AddressPinSet, PinsSdram, Sdram, SdramChip, SdramPinSet, SdramTargetBank};
 
 use crate::pac as stm32;
-use crate::rcc::Clocks;
 use crate::time::Hertz;
 
 use crate::gpio::gpioa::PA7;
@@ -65,13 +64,13 @@ use crate::gpio::{Alternate, AF12};
 
 /// Storage type for Flexible Memory Controller and its clocks
 pub struct FMC {
-    _fmc: stm32::FMC,
+    pub fmc: stm32::FMC,
     hclk: Hertz,
 }
 
 /// Extension trait for FMC controller
 pub trait FmcExt: Sized {
-    fn fmc(self, clocks: &Clocks) -> FMC;
+    fn fmc(self, hclk: Hertz) -> FMC;
 
     /// A new SDRAM memory via the Flexible Memory Controller
     fn sdram<
@@ -83,9 +82,9 @@ pub trait FmcExt: Sized {
         self,
         pins: PINS,
         chip: CHIP,
-        clocks: &Clocks,
+        hclk: Hertz,
     ) -> Sdram<FMC, CHIP> {
-        let fmc = self.fmc(clocks);
+        let fmc = self.fmc(hclk);
         Sdram::new(fmc, pins, chip)
     }
 
@@ -94,20 +93,17 @@ pub trait FmcExt: Sized {
         self,
         bank: BANK,
         chip: CHIP,
-        clocks: &Clocks,
+        hclk: Hertz,
     ) -> Sdram<FMC, CHIP> {
-        let fmc = self.fmc(clocks);
+        let fmc = self.fmc(hclk);
         Sdram::new_unchecked(fmc, bank, chip)
     }
 }
 
 impl FmcExt for stm32::FMC {
     /// New FMC instance
-    fn fmc(self, clocks: &Clocks) -> FMC {
-        FMC {
-            _fmc: self,
-            hclk: clocks.hclk(),
-        }
+    fn fmc(self, hclk: crate::time::Hertz) -> FMC {
+        FMC { fmc: self, hclk }
     }
 }
 

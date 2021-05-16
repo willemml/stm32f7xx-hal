@@ -73,12 +73,13 @@ pub use self::pins::{
 };
 pub use self::timing::{AccessMode, Timing};
 
-use crate::bb;
-use crate::pac::RCC;
+use stm32_fmc::FmcPeripheral;
+
+use crate::fmc::FmcExt;
 
 // Use the FMC or FSMC, whichever is available, and treat it like an FSMC
-use crate::pac::fmc as fsmc;
-use crate::pac::FMC as FSMC;
+use crate::fmc;
+use crate::pac;
 
 /// A sub-bank of bank 1, with its own chip select output
 pub trait SubBank: sealed::SealedSubBank {}
@@ -108,12 +109,12 @@ impl sealed::SealedSubBank for SubBank4 {
 impl SubBank for SubBank4 {}
 
 /// An FMC or FSMC configured as an LCD interface
-pub struct FsmcLcd<PINS> {
-    pins: PINS,
-    fsmc: FSMC,
+pub struct FmcLcd<PINS> {
+    pub pins: PINS,
+    pub fmc: fmc::FMC,
 }
 
-impl<PINS> FsmcLcd<PINS>
+impl<PINS> FmcLcd<PINS>
 where
     PINS: Pins,
 {
@@ -196,69 +197,46 @@ where
     /// lcds.3.write_command(40);
     /// ```
     pub fn new(
-        fsmc: FSMC,
+        fmc: pac::FMC,
+        hclk: crate::time::Hertz,
         pins: PINS,
         read_timing: &Timing,
         write_timing: &Timing,
     ) -> (Self, PINS::Lcds) {
         use self::sealed::Conjure;
-        unsafe {
-            //NOTE(unsafe) this reference will only be used for atomic writes with no side effects
-            let rcc = &(*RCC::ptr());
-            // Enable the FSMC/FMC peripheral
-            // All STM32F4 models with an FSMC or FMC use bit 0 in AHB3ENR and AHB3RSTR.
-            bb::set(&rcc.ahb3enr, 0);
-
-            // Stall the pipeline to work around erratum 2.1.13 (DM00037591)
-            cortex_m::asm::dsb();
-            // Reset FSMC/FMC
-            bb::set(&rcc.ahb3rstr, 0);
-            bb::clear(&rcc.ahb3rstr, 0);
-        }
+        use rtt_target::rprintln;
+        let mut fmc = fmc.fmc(hclk);
+        rprintln!("fmc en");
+        fmc.enable();
+        rprintln!("bcr config");
 
         // Configure memory type and basic interface settings
         // The reference manuals are sometimes unclear on the distinction between banks
         // and sub-banks of bank 1. This driver uses addresses in the different sub-banks of
         // bank 1. The configuration registers for "bank x" (like FMC_BCRx) actually refer to
         // sub-banks, not banks. We need to configure and enable all four of them.
-        configure_bcr1(&fsmc.bcr1);
-        configure_bcr(&fsmc.bcr2);
-        configure_bcr(&fsmc.bcr3);
-        configure_bcr(&fsmc.bcr4);
-        configure_btr(&fsmc.btr1, read_timing);
-        configure_btr(&fsmc.btr2, read_timing);
-        configure_btr(&fsmc.btr3, read_timing);
-        configure_btr(&fsmc.btr4, read_timing);
-        configure_bwtr(&fsmc.bwtr1, write_timing);
-        configure_bwtr(&fsmc.bwtr2, write_timing);
-        configure_bwtr(&fsmc.bwtr3, write_timing);
-        configure_bwtr(&fsmc.bwtr4, write_timing);
+        let fmc_ref = &fmc.fmc;
+        configure_bcr1(&fmc_ref.bcr1);
+        configure_bcr(&fmc_ref.bcr2);
+        configure_bcr(&fmc_ref.bcr3);
+        configure_bcr(&fmc_ref.bcr4);
+        rprintln!("btr config");
+        configure_btr(&fmc_ref.btr1, read_timing);
+        configure_btr(&fmc_ref.btr2, read_timing);
+        configure_btr(&fmc_ref.btr3, read_timing);
+        configure_btr(&fmc_ref.btr4, read_timing);
+        rprintln!("bwtr config");
+        configure_bwtr(&fmc_ref.bwtr1, write_timing);
+        configure_bwtr(&fmc_ref.bwtr2, write_timing);
+        configure_bwtr(&fmc_ref.bwtr3, write_timing);
+        configure_bwtr(&fmc_ref.bwtr4, write_timing);
 
-        (FsmcLcd { pins, fsmc }, PINS::Lcds::conjure())
-    }
-
-    /// Reunites this FsmcLcd and all its associated LCDs, and returns the FSMC and pins for other
-    /// uses
-    ///
-    /// This function also resets and disables the FSMC.
-    pub fn release(self, _lcds: PINS::Lcds) -> (FSMC, PINS) {
-        unsafe {
-            //NOTE(unsafe) this reference will only be used for atomic writes with no side effects
-            let rcc = &(*RCC::ptr());
-            // All STM32F4 models with an FSMC or FMC use bit 0 in AHB3ENR and AHB3RSTR.
-            // Reset FSMC/FMC
-            bb::set(&rcc.ahb3rstr, 0);
-            bb::clear(&rcc.ahb3rstr, 0);
-            // Disable the FSMC/FMC peripheral
-            bb::clear(&rcc.ahb3enr, 0);
-        }
-
-        (self.fsmc, self.pins)
+        (FmcLcd { pins, fmc }, PINS::Lcds::conjure())
     }
 }
 
 /// Configures an SRAM/NOR-Flash chip-select control register for LCD interface use
-fn configure_bcr1(bcr: &fsmc::BCR1) {
+fn configure_bcr1(bcr: &pac::fmc::BCR1) {
     bcr.write(|w| {
         w
             // The write fifo and WFDIS bit are missing from some models.
@@ -313,7 +291,7 @@ fn configure_bcr1(bcr: &fsmc::BCR1) {
 ///
 /// This is equivalent to `configure_bcr1`, but without the `WFDIS` and `CCLKEN` bits that are
 /// present in BCR1 only.
-fn configure_bcr(bcr: &fsmc::BCR) {
+fn configure_bcr(bcr: &pac::fmc::BCR) {
     bcr.write(|w| {
         w
             // Disable synchronous writes
@@ -362,7 +340,7 @@ fn configure_bcr(bcr: &fsmc::BCR) {
 }
 
 /// Configures a read timing register
-fn configure_btr(btr: &fsmc::BTR, read_timing: &Timing) {
+fn configure_btr(btr: &pac::fmc::BTR, read_timing: &Timing) {
     btr.write(|w| unsafe {
         w.accmod()
             .variant(read_timing.access_mode.as_read_variant())
@@ -377,7 +355,7 @@ fn configure_btr(btr: &fsmc::BTR, read_timing: &Timing) {
     })
 }
 /// Configures a write timing register
-fn configure_bwtr(bwtr: &fsmc::BWTR, write_timing: &Timing) {
+fn configure_bwtr(bwtr: &pac::fmc::BWTR, write_timing: &Timing) {
     bwtr.write(|w| unsafe {
         w.accmod()
             .variant(write_timing.access_mode.as_write_variant())

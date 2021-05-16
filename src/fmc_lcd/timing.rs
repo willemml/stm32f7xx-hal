@@ -1,6 +1,6 @@
 //! FMC/FSMC timing
 
-use super::fsmc;
+use super::pac::fmc;
 
 /// Memory access modes
 ///
@@ -15,8 +15,8 @@ pub enum AccessMode {
 }
 
 impl AccessMode {
-    pub(crate) fn as_read_variant(&self) -> fsmc::btr::ACCMOD_A {
-        use fsmc::btr::ACCMOD_A;
+    pub(crate) fn as_read_variant(&self) -> fmc::btr::ACCMOD_A {
+        use fmc::btr::ACCMOD_A;
         match *self {
             AccessMode::ModeA => ACCMOD_A::A,
             AccessMode::ModeB => ACCMOD_A::B,
@@ -24,8 +24,8 @@ impl AccessMode {
             AccessMode::ModeD => ACCMOD_A::D,
         }
     }
-    pub(crate) fn as_write_variant(&self) -> fsmc::bwtr::ACCMOD_A {
-        use fsmc::bwtr::ACCMOD_A;
+    pub(crate) fn as_write_variant(&self) -> fmc::bwtr::ACCMOD_A {
+        use fmc::bwtr::ACCMOD_A;
         match *self {
             AccessMode::ModeA => ACCMOD_A::A,
             AccessMode::ModeB => ACCMOD_A::B,
