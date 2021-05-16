@@ -204,11 +204,8 @@ where
         write_timing: &Timing,
     ) -> (Self, PINS::Lcds) {
         use self::sealed::Conjure;
-        use rtt_target::rprintln;
         let mut fmc = fmc.fmc(hclk);
-        rprintln!("fmc en");
         fmc.enable();
-        rprintln!("bcr config");
 
         // Configure memory type and basic interface settings
         // The reference manuals are sometimes unclear on the distinction between banks
@@ -220,12 +217,10 @@ where
         configure_bcr(&fmc_ref.bcr2);
         configure_bcr(&fmc_ref.bcr3);
         configure_bcr(&fmc_ref.bcr4);
-        rprintln!("btr config");
         configure_btr(&fmc_ref.btr1, read_timing);
         configure_btr(&fmc_ref.btr2, read_timing);
         configure_btr(&fmc_ref.btr3, read_timing);
         configure_btr(&fmc_ref.btr4, read_timing);
-        rprintln!("bwtr config");
         configure_bwtr(&fmc_ref.bwtr1, write_timing);
         configure_bwtr(&fmc_ref.bwtr2, write_timing);
         configure_bwtr(&fmc_ref.bwtr3, write_timing);
