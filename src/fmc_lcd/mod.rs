@@ -272,7 +272,7 @@ fn configure_bcr1(bcr: &pac::fmc::BCR1) {
             .bits16()
             // NOR flash mode (compatible with LCD controllers)
             .mtyp()
-            .flash()
+            .sram()
             // Address and data not multiplexed
             .muxen()
             .disabled()

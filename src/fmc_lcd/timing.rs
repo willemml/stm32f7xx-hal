@@ -58,16 +58,27 @@ impl Default for Timing {
     /// Returns a conservative (slow) timing configuration with access mode C
     fn default() -> Self {
         Timing {
-            access_mode: AccessMode::ModeC,
-            bus_turnaround: 0,
+            access_mode: AccessMode::ModeA,
+            bus_turnaround: Timing::BUS_TURNAROUND_MAX,
             data: 255,
-            address_hold: 0,
-            address_setup: 1,
+            address_hold: Timing::ADDRESS_HOLD_MAX,
+            address_setup: Timing::ADDRESS_SETUP_MAX,
         }
     }
 }
 
 impl Timing {
+    /// Maximum allowed value of the bus turnaround time
+    pub const BUS_TURNAROUND_MAX: u8 = 15;
+    /// Minimum allowed value of the data phase time
+    pub const DATA_MIN: u8 = 1;
+    /// Maximum allowed value of the address hold time
+    pub const ADDRESS_HOLD_MIN: u8 = 1;
+    /// Maximum allowed value of the address hold time
+    pub const ADDRESS_HOLD_MAX: u8 = 15;
+    /// Maximum allowed value of the address setup time
+    pub const ADDRESS_SETUP_MAX: u8 = 15;
+
     /// Sets the access mode
     pub fn access_mode(self, access_mode: AccessMode) -> Self {
         Timing {
